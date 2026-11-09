@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Icon system: 24px grid, 1.75 stroke, round caps and joins, stroke color inherited from CSS. -->
+  <symbol id="icon" viewBox="0 0 24 24">
+    <path d="M7 8.5l5 5 5-5"/>
+    <path d="M5.5 18.5h13"/>
+  </symbol>
+  <use href="#icon" fill="none" stroke="#ECE9E4" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

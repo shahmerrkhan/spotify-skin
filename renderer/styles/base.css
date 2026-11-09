@@ -1,0 +1,100 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+html, body { height: 100%; }
+
+body {
+  overflow: hidden;
+  background: var(--ink-950);
+  color: var(--text-1);
+  font: 400 13px/1.35 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+::selection { background: oklch(1 0 0 / 0.22); color: inherit; }
+
+/* Placeholder surface until album art arrives in phase 2: a soft falloff of
+   light from the top right (where the clock goes), so the glass has something to sit on. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(90% 80% at 78% 8%, var(--ink-900), transparent 70%),
+    var(--ink-950);
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  align-content: end;
+  padding: var(--inset);
+}
+
+.stage__note {
+  color: var(--text-3);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Hide pill: small and quiet, top left (the clock gets the top right) */
+.hide-pill {
+  position: fixed;
+  top: var(--inset);
+  left: var(--inset);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-pill);
+  background: var(--glass-fill);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--shadow-float);
+  color: var(--text-1);
+  font: 500 12.5px/1 var(--font-ui);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    transform var(--dur-med) var(--ease-spring),
+    background-color var(--dur-fast) linear,
+    border-color var(--dur-fast) linear;
+}
+
+.hide-pill:hover {
+  transform: translateY(-1px);
+  background: var(--glass-fill-hover);
+  border-color: var(--glass-line-hover);
+}
+
+.hide-pill:active {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 80ms;
+}
+
+.hide-pill:focus-visible {
+  outline: 2px solid oklch(1 0 0 / 0.7);
+  outline-offset: 3px;
+}
+
+.hide-pill__keys {
+  margin-left: 3px;
+  padding-left: 9px;
+  border-left: 1px solid var(--glass-line);
+  color: var(--text-3);
+  font: 500 11px/1 var(--font-ui);
+  letter-spacing: 0.02em;
+}

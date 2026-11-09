@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
+  <title>Spotify Skin</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/base.css">
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+
+  <main class="stage">
+    <p class="stage__note">Nothing playing yet. Spotify connects in phase 2.</p>
+  </main>
+
+  <button class="hide-pill" id="hide" type="button"
+          aria-keyshortcuts="Control+Alt+M Escape" title="Hide (Ctrl+Alt+M)">
+    <svg class="icon" aria-hidden="true"><use href="/assets/icons/hide.svg#icon"></use></svg>
+    <span>Hide</span>
+    <kbd class="hide-pill__keys">Ctrl Alt M</kbd>
+  </button>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

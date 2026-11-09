@@ -1,0 +1,51 @@
+/* Design tokens.
+   Only neutrals are hard-coded. From phase 2, every hue comes from the album art
+   as --art-dominant / --art-accent, set at runtime. */
+
+:root {
+  color-scheme: dark;
+
+  /* Neutrals, slightly warm so they sit under any album palette */
+  --ink-950: oklch(0.135 0.004 70);
+  --ink-900: oklch(0.19 0.005 70);
+  --text-1: oklch(0.96 0.005 80);
+  --text-2: oklch(0.96 0.005 80 / 0.66);
+  --text-3: oklch(0.96 0.005 80 / 0.52);
+
+  /* Glass */
+  --glass-fill: oklch(1 0 0 / 0.075);
+  --glass-fill-hover: oklch(1 0 0 / 0.12);
+  --glass-line: oklch(1 0 0 / 0.14);
+  --glass-line-hover: oklch(1 0 0 / 0.22);
+  --glass-blur: 28px;
+  --glass-saturate: 1.5;
+  --shadow-float:
+    0 10px 30px -12px oklch(0 0 0 / 0.55),
+    0 2px 6px -2px oklch(0 0 0 / 0.35);
+
+  /* Shape and space */
+  --radius-pill: 999px;
+  --radius-panel: 22px;
+  --inset: 28px;
+
+  /* Icons: 24px grid, one stroke weight everywhere */
+  --icon-stroke: 1.75;
+
+  /* Type. Phase 2 swaps in bundled faces (condensed display + tight sans). */
+  --font-ui: system-ui, sans-serif;
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: linear(0, 0.06 2.4%, 0.23 5.2%, 0.69 12.2%, 0.88 16.4%, 1.01 21.4%, 1.05 25.4%, 1.06 29.6%, 1.04 35.6%, 1.01 44.4%, 0.995 54%, 1);
+  --dur-fast: 140ms;
+  --dur-med: 320ms;
+  --dur-slow: 620ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-med: 0ms;
+    --dur-slow: 0ms;
+  }
+}

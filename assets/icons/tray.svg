@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64">
+  <!-- Tray mark: a record seen from above. Same stroke system as the UI icons, slightly heavier so it reads at 22px. -->
+  <g fill="none" stroke="#ECE9E4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/>
+    <circle cx="12" cy="12" r="2.25"/>
+    <path d="M12 6.25a5.75 5.75 0 0 1 5.75 5.75"/>
+  </g>
+</svg>
