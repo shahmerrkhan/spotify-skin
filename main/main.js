@@ -376,11 +376,14 @@ function registerIpc() {
   ipcMain.on('skin:a11y', (event, a) => {
     if (!fromUi(event) || !a || typeof a !== 'object') return;
     const pick = (v) => (v === null ? null : Boolean(v));
+    const oneOf = (v, allowed) => (allowed.includes(v) ? v : 'medium');
     cfg.a11y = {
       reducedMotion: pick(a.reducedMotion),
       largeText: Boolean(a.largeText),
       highContrast: Boolean(a.highContrast),
-      glow: ['low', 'medium', 'high'].includes(a.glow) ? a.glow : 'medium',
+      glow: oneOf(a.glow, ['low', 'medium', 'high']),
+      glowWidth: oneOf(a.glowWidth, ['thin', 'medium', 'thick']),
+      glowReach: oneOf(a.glowReach, ['short', 'medium', 'long']),
     };
     try {
       config.save(cfg);

@@ -25,8 +25,13 @@ const DEFAULTS = Object.freeze({
   // Seconds without mouse movement before the panels fade to the minimal state.
   minimalAfterSec: 30,
   // reducedMotion: null follows the system setting; true/false is your choice from the Aa menu.
-  // glow: edge glow strength from the Aa menu, "low" | "medium" | "high".
-  a11y: { reducedMotion: null, largeText: false, highContrast: false, glow: 'medium' },
+  // Edge glow from the Aa menu: glow (strength) "low" | "medium" | "high",
+  // glowWidth (solid band) "thin" | "medium" | "thick",
+  // glowReach (how far the haze fades out) "short" | "medium" | "long".
+  a11y: {
+    reducedMotion: null, largeText: false, highContrast: false,
+    glow: 'medium', glowWidth: 'medium', glowReach: 'medium',
+  },
 });
 
 function ensureDirs() {

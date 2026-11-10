@@ -9,14 +9,27 @@
 // thickening on the beat). All of it runs on the compositor.
 //
 // State comes from the root classes: is-playing, is-calm (minimal state),
-// anim-paused (locked/asleep/covered), reduce-motion, contrast, plus the glow
-// level (data-glow) from the Aa menu.
+// anim-paused (locked/asleep/covered), reduce-motion, contrast, plus from the
+// Aa menu: glow level (data-glow, CSS only), width (data-glow-width: how deep the
+// solid band is) and reach (data-glow-reach: how far the soft haze fades out).
+// Width and reach change the painting, so they repaint once; nothing per frame.
 //   playing          drift at full speed, pulse on the beat (when known)
 //   paused / calm    half brightness, drift very slow, no pulse
 //   covered/locked   everything stops
 //   reduce motion    still colours, no drift, no pulse
 
-const DEPTH = 150;              // band thickness in px (canvas), before the soft falloff
+// Solid band depth (px from the edge) and haze reach (px where the haze fades out),
+// per Aa menu step. Medium/Medium is the original look.
+const WIDTHS = { thin: 28, medium: 45, thick: 70 };
+const REACHES = { short: 60, medium: 95, long: 150 };
+const WOBBLE = 13;              // wave height either side of the band edge at medium width
+const BAND_BLUR = 11;
+const HAZE_BLUR = 28;
+const HAZE_WOBBLE = 1.45;       // the haze follows the band's wave, a bit exaggerated
+// Canvas depth = how far the blurred haze/band can still show, plus a margin. Kept
+// as small as possible: the canvases are the glow's main memory cost.
+const TAIL_SIGMAS = 2.2;        // blur tail beyond the shape that can still be seen
+const DEPTH_MARGIN = 8;
 const DRIFT_PX_S = 80;          // how fast colours travel along the edges while playing
 const SLOW_RATE = 0.2;          // drift speed factor when paused / calm
 const FAST_SONG_BPM = 130;      // above this, pulse every second beat
@@ -39,13 +52,26 @@ function resolveColors(root) {
   return c;
 }
 
+export function glowGeometry(widthKey, reachKey) {
+  const band = WIDTHS[widthKey] ?? WIDTHS.medium;
+  const reach = REACHES[reachKey] ?? REACHES.medium;
+  const wobble = WOBBLE * (band / WIDTHS.medium);
+  const haze = reach - 30;      // haze shape edge; its blur carries it out to ~reach
+  const depth = Math.ceil(Math.max(
+    band + wobble + TAIL_SIGMAS * BAND_BLUR,
+    haze + wobble * HAZE_WOBBLE + TAIL_SIGMAS * HAZE_BLUR,
+  )) + DEPTH_MARGIN;
+  return { band, haze, wobble, depth };
+}
+
 // One edge, drawn as if it were the top edge (edge at y = 0, depth going down),
 // `len` px long, periodic every len/2 so sliding by half loops seamlessly.
-function paintEdge(ctx, len, colors, phase) {
+export function paintEdge(ctx, len, colors, phase, geo) {
   const period = len / 2;
-  const wave = (x) => DEPTH * 0.3
-    + Math.sin((x / period) * Math.PI * 4 + phase) * 9
-    + Math.sin((x / period) * Math.PI * 10 + phase * 1.7) * 4;
+  const k = geo.wobble / WOBBLE;
+  const wob = (x) => (Math.sin((x / period) * Math.PI * 4 + phase) * 9
+    + Math.sin((x / period) * Math.PI * 10 + phase * 1.7) * 4) * k;
+  const wave = (x) => geo.band + wob(x);
   const grad = ctx.createLinearGradient(0, 0, len, 0);
   const cycle = [colors.a, colors.b, colors.c];
   // Two identical colour cycles (one per half), shifted per edge so edges differ.
@@ -56,21 +82,21 @@ function paintEdge(ctx, len, colors, phase) {
 
   // Draw past both ends so the blur has neighbours there too (no dark seams).
   const PAD = 120;
-  const area = (depthScale) => {
+  const area = (edge) => {
     ctx.beginPath();
     ctx.moveTo(-PAD, -40);
-    for (let x = -PAD; x <= len + PAD; x += 16) ctx.lineTo(x, wave(x) * depthScale);
+    for (let x = -PAD; x <= len + PAD; x += 16) ctx.lineTo(x, edge(x));
     ctx.lineTo(len + PAD, -40);
     ctx.closePath();
   };
   ctx.fillStyle = grad;
   ctx.globalAlpha = 0.4;           // atmospheric haze, kept close to the edge
-  ctx.filter = 'blur(28px)';
-  area(1.45);
+  ctx.filter = `blur(${HAZE_BLUR}px)`;
+  area((x) => geo.haze + wob(x) * HAZE_WOBBLE);
   ctx.fill();
   ctx.globalAlpha = 0.95;          // the band itself
-  ctx.filter = 'blur(11px)';
-  area(1);
+  ctx.filter = `blur(${BAND_BLUR}px)`;
+  area(wave);
   ctx.fill();
   // Bright wavy core line along the band's edge.
   ctx.beginPath();
@@ -116,23 +142,25 @@ export function createGlow({ root, el, skin }) {
     const h = el.clientHeight;
     if (!w || !h) return;
     const colors = resolveColors(root);
+    const geo = glowGeometry(root.dataset.glowWidth, root.dataset.glowReach);
+    const D = geo.depth;
     const out = {};
     SIDES.forEach((side, i) => {
       const horizontal = side === 'top' || side === 'bottom';
       const len = (horizontal ? w : h) * 2;
-      const cw = horizontal ? len : DEPTH * 2;
-      const ch = horizontal ? DEPTH * 2 : len;
+      const cw = horizontal ? len : D;
+      const ch = horizontal ? D : len;
       const oc = new OffscreenCanvas(cw, ch);
       const ctx = oc.getContext('2d');
       // Map "top edge" drawing coordinates onto this side.
-      const D = DEPTH * 2;
       if (side === 'bottom') ctx.setTransform(1, 0, 0, -1, 0, D);
       else if (side === 'left') ctx.setTransform(0, 1, 1, 0, 0, 0);
       else if (side === 'right') ctx.setTransform(0, 1, -1, 0, D, 0);
-      paintEdge(ctx, len, colors, i * 1.3);
+      paintEdge(ctx, len, colors, i * 1.3, geo);
       out[side] = oc.transferToImageBitmap();
     });
     if (gen !== renderGen) return Object.values(out).forEach((b) => b.close());
+    el.style.setProperty('--glow-depth', `${D}px`); // edge boxes match the canvases
     for (const side of SIDES) {
       const e = edges[side];
       e.canvas.width = out[side].width;
@@ -246,6 +274,14 @@ export function createGlow({ root, el, skin }) {
   }
 
   new MutationObserver(() => syncPulse()).observe(root, { attributes: true, attributeFilter: ['class'] });
+  // Width / reach from the Aa menu: repaint (only when the value really changed).
+  let shape = `${root.dataset.glowWidth}|${root.dataset.glowReach}`;
+  new MutationObserver(() => {
+    const next = `${root.dataset.glowWidth}|${root.dataset.glowReach}`;
+    if (next === shape) return;
+    shape = next;
+    render();
+  }).observe(root, { attributes: true, attributeFilter: ['data-glow-width', 'data-glow-reach'] });
   new ResizeObserver(() => render()).observe(el);
 
   return {

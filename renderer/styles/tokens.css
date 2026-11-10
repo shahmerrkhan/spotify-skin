@@ -40,8 +40,10 @@
   --glass-blur: 26px;
   --shadow: 0 24px 60px -24px rgb(0 0 0 / 0.6), 0 4px 14px -6px rgb(0 0 0 / 0.45);
 
-  /* Edge glow: strength from the Aa menu (data-glow on <html>), warm corner colours */
+  /* Edge glow: strength, width, reach from the Aa menu (data-glow* on <html>), warm corner colours */
   --glow-level: 0.72;
+  --glow-corner: 560px;           /* corner glow size: follows glow reach */
+  --glow-corner-a: 0.85;          /* corner glow strength: follows glow width */
   --warm: oklch(0.82 0.12 58);    /* peach */
   --warm-2: oklch(0.72 0.17 42);  /* orange */
 
@@ -77,6 +79,12 @@
 :root[data-glow="low"]    { --glow-level: 0.45; }
 :root[data-glow="medium"] { --glow-level: 0.72; }
 :root[data-glow="high"]   { --glow-level: 0.95; }
+:root[data-glow-reach="short"]  { --glow-corner: 420px; }
+:root[data-glow-reach="medium"] { --glow-corner: 560px; }
+:root[data-glow-reach="long"]   { --glow-corner: 730px; }
+:root[data-glow-width="thin"]   { --glow-corner-a: 0.7; }
+:root[data-glow-width="medium"] { --glow-corner-a: 0.85; }
+:root[data-glow-width="thick"]  { --glow-corner-a: 1; }
 
 /* Reduced motion: no spin, no drift, no movement. Fades become near-instant. */
 :root.reduce-motion {

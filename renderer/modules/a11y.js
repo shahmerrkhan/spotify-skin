@@ -1,11 +1,19 @@
 // Display options (the "Aa" pill): reduce motion, larger text, higher contrast,
-// and the edge glow level (low / medium / high).
+// and three edge glow rows: level, width, reach (each low / medium / high style).
+// Each glow row is a radiogroup (data-seg = the setting) mirrored onto <html> as a
+// data attribute (glowWidth -> data-glow-width) for CSS and the glow painter.
 // Saved to config.json through the main process. Reduce motion starts out
 // following the system setting until you flip it yourself.
 
 export function setupA11y({ root, button, menu, initial, save, onOpenChange }) {
-  const state = { reducedMotion: null, largeText: false, highContrast: false, glow: 'medium', ...initial };
-  const glowOpts = [...menu.querySelectorAll('[data-glow]')];
+  const state = {
+    reducedMotion: null, largeText: false, highContrast: false,
+    glow: 'medium', glowWidth: 'medium', glowReach: 'medium', ...initial,
+  };
+  const segs = [...menu.querySelectorAll('[data-seg]')].map((g) => ({
+    key: g.dataset.seg,
+    opts: [...g.querySelectorAll('[data-value]')],
+  }));
   const mq = matchMedia('(prefers-reduced-motion: reduce)');
   const switches = [...menu.querySelectorAll('[data-a11y]')];
 
@@ -16,19 +24,21 @@ export function setupA11y({ root, button, menu, initial, save, onOpenChange }) {
     root.classList.toggle('large', effective('largeText'));
     root.classList.toggle('contrast', effective('highContrast'));
     for (const sw of switches) sw.setAttribute('aria-checked', String(effective(sw.dataset.a11y)));
-    root.dataset.glow = state.glow;
-    for (const o of glowOpts) {
-      const on = o.dataset.glow === state.glow;
-      o.setAttribute('aria-checked', String(on));
-      o.tabIndex = on ? 0 : -1; // one tab stop for the group; arrows move inside it
+    for (const { key, opts } of segs) {
+      root.dataset[key] = state[key];
+      for (const o of opts) {
+        const on = o.dataset.value === state[key];
+        o.setAttribute('aria-checked', String(on));
+        o.tabIndex = on ? 0 : -1; // one tab stop per row; arrows move inside it
+      }
     }
   }
 
-  function setGlow(level, focus) {
-    state.glow = level;
+  function setSeg(seg, value, focus) {
+    state[seg.key] = value;
     apply();
     save({ ...state });
-    if (focus) glowOpts.find((o) => o.dataset.glow === level)?.focus();
+    if (focus) seg.opts.find((o) => o.dataset.value === value)?.focus();
   }
 
   function setOpen(open) {
@@ -47,15 +57,18 @@ export function setupA11y({ root, button, menu, initial, save, onOpenChange }) {
       save({ ...state });
     });
   }
-  for (const o of glowOpts) {
-    o.addEventListener('click', () => setGlow(o.dataset.glow, false));
-    o.addEventListener('keydown', (e) => {
-      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-      if (!step) return;
-      e.preventDefault();
-      const i = glowOpts.indexOf(o);
-      setGlow(glowOpts[(i + step + glowOpts.length) % glowOpts.length].dataset.glow, true);
-    });
+  for (const seg of segs) {
+    const { opts } = seg;
+    for (const o of opts) {
+      o.addEventListener('click', () => setSeg(seg, o.dataset.value, false));
+      o.addEventListener('keydown', (e) => {
+        const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        const i = opts.indexOf(o);
+        setSeg(seg, opts[(i + step + opts.length) % opts.length].dataset.value, true);
+      });
+    }
   }
   // Escape closes the menu first (and doesn't hide the app); so does a click elsewhere.
   menu.addEventListener('keydown', (e) => {

@@ -43,12 +43,28 @@
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="reducedMotion"><span class="switch__label">Reduce motion</span><span class="switch__track" aria-hidden="true"></span></button>
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="largeText"><span class="switch__label">Larger text</span><span class="switch__track" aria-hidden="true"></span></button>
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="highContrast"><span class="switch__label">Higher contrast</span><span class="switch__track" aria-hidden="true"></span></button>
-          <div class="seg" role="radiogroup" aria-labelledby="glow-label">
+          <div class="seg" role="radiogroup" aria-labelledby="glow-label" data-seg="glow">
             <span class="seg__label cav" id="glow-label">Edge glow</span>
             <div class="seg__opts">
-              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-glow="low">Low</button>
-              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-glow="medium">Medium</button>
-              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-glow="high">High</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="low">Low</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="medium">Medium</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="high">High</button>
+            </div>
+          </div>
+          <div class="seg" role="radiogroup" aria-labelledby="glow-width-label" data-seg="glowWidth">
+            <span class="seg__label cav" id="glow-width-label">Glow width</span>
+            <div class="seg__opts">
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="thin">Thin</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="medium">Medium</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="thick">Thick</button>
+            </div>
+          </div>
+          <div class="seg" role="radiogroup" aria-labelledby="glow-reach-label" data-seg="glowReach">
+            <span class="seg__label cav" id="glow-reach-label">Glow reach</span>
+            <div class="seg__opts">
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="short">Short</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="medium">Medium</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-value="long">Long</button>
             </div>
           </div>
         </div>
