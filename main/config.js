@@ -28,9 +28,11 @@ const DEFAULTS = Object.freeze({
   // Edge glow from the Aa menu: glow (strength) "low" | "medium" | "high",
   // glowWidth (solid band) "thin" | "medium" | "thick",
   // glowReach (how far the haze fades out) "short" | "medium" | "long".
+  // lyrics: synced lyrics bottom right (Aa menu switch). Your own .lrc files go in
+  // ~/.config/spotify-skin/lyrics/ as "Artist - Title.lrc".
   a11y: {
     reducedMotion: null, largeText: false, highContrast: false,
-    glow: 'medium', glowWidth: 'medium', glowReach: 'medium',
+    glow: 'medium', glowWidth: 'medium', glowReach: 'medium', lyrics: true,
   },
 });
 

@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('skin', {
   onHistory: (fn) => listen('skin:history', fn),
   onPaused: (fn) => listen('skin:paused', fn),
   onBeat: (fn) => listen('skin:beat', fn),
+  onLyrics: (fn) => listen('skin:lyrics', fn),
   // The glow tells the app when the beat pulse is on screen (listening only happens then).
   setGlowWanted: (on) => ipcRenderer.send('skin:glow-want', Boolean(on)),
 });

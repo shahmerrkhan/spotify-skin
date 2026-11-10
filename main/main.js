@@ -18,6 +18,7 @@ const { Mpris } = require('./mpris');
 const { Visibility, isDesktopWindow } = require('./visibility');
 const { SpotifyApp } = require('./spotify-app');
 const { Tempo } = require('./tempo');
+const { Lyrics } = require('./lyrics');
 
 const DEV = process.argv.includes('--dev');
 const DEVTOOLS = DEV && !process.argv.includes('--no-devtools');
@@ -43,6 +44,7 @@ let visibility = null;
 let currentArt = { trackId: '', name: null }; // cover of the track Spotify is on now
 let uiPaused = false;
 let tempo = null;
+let lyrics = null;
 let glowWanted = false;   // the UI is showing the beat pulse (playing, awake, motion on)
 let spotifyApp = null;
 let quitting = false;
@@ -119,6 +121,7 @@ function onPlayerState(state, { trackChanged }) {
     rebuildTrayMenu();
   }
   tempo?.setTrack(state.running ? state.track : null);
+  lyrics?.setTrack(state.running ? state.track : null);
   if (!state.running) {
     // Spotify quit: never leave album art behind as the wallpaper.
     currentArt = { trackId: '', name: null };
@@ -225,6 +228,11 @@ async function startServices() {
         || p['application.id'] === 'com.spotify.Client' || p['pipewire.access.portal.app_id'] === 'com.spotify.Client',
   });
   tempo.on('beat', (info) => windowMgr.send('skin:beat', info));
+  // Synced lyrics (LRCLIB + your own .lrc files). SKIN_LRCLIB_BASE (dev only) points
+  // the lookup elsewhere, e.g. at a dead address to test the offline path.
+  lyrics = new Lyrics({ base: DEV ? process.env.SKIN_LRCLIB_BASE : undefined });
+  lyrics.setEnabled(cfg.a11y.lyrics !== false);
+  lyrics.on('lyrics', (l) => windowMgr.send('skin:lyrics', l));
   mpris = new Mpris(mprisBus);
   mpris.on('state', onPlayerState);
   try {
@@ -338,6 +346,7 @@ function registerIpc() {
       art: currentArt,
       history: history.list(),
       beat: tempo ? tempo.current() : null,
+      lyrics: lyrics ? lyrics.current() : null,
     };
   });
 
@@ -384,7 +393,9 @@ function registerIpc() {
       glow: oneOf(a.glow, ['low', 'medium', 'high']),
       glowWidth: oneOf(a.glowWidth, ['thin', 'medium', 'thick']),
       glowReach: oneOf(a.glowReach, ['short', 'medium', 'long']),
+      lyrics: a.lyrics !== false,
     };
+    lyrics?.setEnabled(cfg.a11y.lyrics);
     try {
       config.save(cfg);
     } catch (err) {
@@ -419,6 +430,7 @@ function cleanup(reason) {
   globalShortcut.unregisterAll();
   visibility?.stop();
   tempo?.stop();
+  lyrics?.stop();
   spotifyApp?.release();
   restoreWallpaper(reason);
 }

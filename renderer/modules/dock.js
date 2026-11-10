@@ -229,6 +229,10 @@ export function createDock(els, skin, mq) {
 
   return {
     update,
+    // Lyrics use the same clock and the same seek path as the bar (incl. the seek hold).
+    positionNow,
+    isPlaying: playing,
+    seek: seekTo,
     setPaused(v) {
       paused = v;
       syncProgress();

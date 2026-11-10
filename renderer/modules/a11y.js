@@ -1,4 +1,4 @@
-// Display options (the "Aa" pill): reduce motion, larger text, higher contrast,
+// Display options (the "Aa" pill): reduce motion, larger text, higher contrast, lyrics,
 // and three edge glow rows: level, width, reach (each low / medium / high style).
 // Each glow row is a radiogroup (data-seg = the setting) mirrored onto <html> as a
 // data attribute (glowWidth -> data-glow-width) for CSS and the glow painter.
@@ -7,7 +7,7 @@
 
 export function setupA11y({ root, button, menu, initial, save, onOpenChange }) {
   const state = {
-    reducedMotion: null, largeText: false, highContrast: false,
+    reducedMotion: null, largeText: false, highContrast: false, lyrics: true,
     glow: 'medium', glowWidth: 'medium', glowReach: 'medium', ...initial,
   };
   const segs = [...menu.querySelectorAll('[data-seg]')].map((g) => ({
@@ -23,6 +23,7 @@ export function setupA11y({ root, button, menu, initial, save, onOpenChange }) {
     root.classList.toggle('reduce-motion', effective('reducedMotion'));
     root.classList.toggle('large', effective('largeText'));
     root.classList.toggle('contrast', effective('highContrast'));
+    root.classList.toggle('lyrics-off', !effective('lyrics'));
     for (const sw of switches) sw.setAttribute('aria-checked', String(effective(sw.dataset.a11y)));
     for (const { key, opts } of segs) {
       root.dataset[key] = state[key];

@@ -43,6 +43,7 @@
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="reducedMotion"><span class="switch__label">Reduce motion</span><span class="switch__track" aria-hidden="true"></span></button>
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="largeText"><span class="switch__label">Larger text</span><span class="switch__track" aria-hidden="true"></span></button>
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="highContrast"><span class="switch__label">Higher contrast</span><span class="switch__track" aria-hidden="true"></span></button>
+          <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="lyrics"><span class="switch__label">Lyrics</span><span class="switch__track" aria-hidden="true"></span></button>
           <div class="seg" role="radiogroup" aria-labelledby="glow-label" data-seg="glow">
             <span class="seg__label cav" id="glow-label">Edge glow</span>
             <div class="seg__opts">
@@ -107,9 +108,18 @@
             <span class="progress__time cav dim" id="time-left">0:00</span>
           </div>
         </div>
+        <!-- Reserved for the seal (batch 4) -->
+        <div class="seal-slot" aria-hidden="true"></div>
       </div>
     </section>
   </div>
+
+  <!-- Synced lyrics, bottom right: a small rolling cylinder of 7 lines, the sung line
+       lit. Dimmed (not hidden) in the minimal state. Hidden when a song has no lyrics.
+       After the panels in the page so Tab reaches the controls first. -->
+  <section class="lyrics" id="lyrics" aria-label="Lyrics" hidden>
+    <div class="lyrics__drum" id="lyrics-drum" role="list"></div>
+  </section>
 
   <!-- Spotify closed -->
   <section class="notice glass" id="notice" role="alert" hidden>

@@ -9,6 +9,7 @@ import { createGlow } from './modules/glow.js';
 import { createPresence } from './modules/presence.js';
 import { setupA11y } from './modules/a11y.js';
 import { createMarquee } from './modules/marquee.js';
+import { createLyrics } from './modules/lyrics.js';
 
 const BRIGHT_L = 0.7; // OKLab lightness behind the clock above which it turns dark-tinted
 
@@ -62,6 +63,7 @@ const dock = createDock({
   dockTitle: $('dock-title'), dockArtist: $('dock-artist'),
   now: $('now'), nowTitle: $('now-title'), nowArtist: $('now-artist'),
 }, skin, mq);
+const lyrics = createLyrics({ root, el: $('lyrics'), drum: $('lyrics-drum'), dock });
 
 function setPalette(p) {
   for (const [k, v] of Object.entries(toCss(p))) root.style.setProperty(k, v);
@@ -90,6 +92,7 @@ function update() {
   if (idle && wasIdle === false) presence.enterIdle();
   wasIdle = idle;
   dock.update(player);
+  lyrics.setPlayer(player); // after the dock: lyrics follow its position
   glow.setPlayer(player);
   renderQueue();
   applyClockTint();
@@ -148,9 +151,11 @@ skin.onHistory((h) => {
   renderQueue();
 });
 skin.onBeat((b) => glow.setBeat(b));
+skin.onLyrics((l) => lyrics.setLyrics(l));
 skin.onPaused((paused) => {
   root.classList.toggle('anim-paused', paused);
   dock.setPaused(paused);
+  lyrics.setPaused(paused);
   mq.setPaused(paused);
   if (!paused) clock.refresh();
 });
@@ -180,5 +185,7 @@ root.classList.toggle('anim-paused', Boolean(init.paused));
 dock.setPaused(Boolean(init.paused));
 mq.setPaused(Boolean(init.paused));
 glow.setBeat(init.beat);
+lyrics.setPaused(Boolean(init.paused));
+lyrics.setLyrics(init.lyrics);
 update();
 loadArt();
