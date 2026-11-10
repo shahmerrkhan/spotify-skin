@@ -6,8 +6,9 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { net, nativeImage } = require('electron');
+const { nativeImage } = require('electron');
 const { CACHE_DIR } = require('./config');
+const http = require('./http');
 
 const ART_DIR = path.join(CACHE_DIR, 'art');
 const KEEP = 30;                     // covers kept on disk (plus anything the history still shows)
@@ -40,12 +41,10 @@ async function readSource(u) {
     if (!st.isFile() || st.size > MAX_BYTES * 4) throw new Error('art file missing or too large');
     return fs.promises.readFile(file);
   }
-  const res = await net.fetch(u.href, { signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  if (!String(res.headers.get('content-type')).startsWith('image/')) throw new Error('not an image');
-  const buf = Buffer.from(await res.arrayBuffer());
-  if (buf.length > MAX_BYTES) throw new Error('image too large');
-  return buf;
+  const res = await http.get(u.href, { timeoutMs: 10_000, maxBytes: MAX_BYTES });
+  if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+  if (!String(res.headers['content-type']).startsWith('image/')) throw new Error('not an image');
+  return res.body;
 }
 
 function writeAtomic(file, buf) {
