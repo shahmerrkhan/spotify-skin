@@ -31,6 +31,7 @@ const SETTINGS = {
 };
 const LOOPS = new Set(['None', 'Playlist', 'Track']);
 const POSITION_JUMP_MS = 1500; // re-sync the UI only when Spotify disagrees by more than this
+const SEEK_SETTLE_MS = 1500;   // after a seek, Spotify may still report the old spot for a moment
 
 function parseMetadata(md) {
   if (!md) return null;
@@ -59,6 +60,7 @@ class Mpris extends EventEmitter {
     this.active = false;
     this.pollTimer = null;
     this.lastKey = '';
+    this.seekAt = 0;
     this.checks = { Shuffle: { gen: 0, timer: null }, LoopStatus: { gen: 0, timer: null } };
     this.s = this._blank();
     this._onProps = this._onProps.bind(this);
@@ -184,9 +186,13 @@ class Mpris extends EventEmitter {
     const t = this.s.track;
     if (!this.player || !t) return;
     const target = Math.max(0, Math.min(Math.round(ms), t.lengthMs || Infinity));
+    // Readings already on their way were taken before the seek: they'd snap the knob back.
+    this.seekAt = Date.now();
+    this._setPosition(target);
     try {
       if (t.id.startsWith('/')) await this.player.SetPosition(t.id, BigInt(target * 1000));
       else await this.player.Seek(BigInt(Math.round((target - this._positionNow()) * 1000)));
+      this.seekAt = Date.now();
       this._setPosition(target);
       this._emit(false, true);
     } catch (err) {
@@ -257,10 +263,11 @@ class Mpris extends EventEmitter {
   async _refresh(force = false) {
     const props = this.props;
     if (!props) return;
+    const startedAt = Date.now();
     try {
       const all = await props.GetAll(PLAYER);
       if (props !== this.props) return;
-      this._apply(all, force);
+      this._apply(all, force, false, startedAt);
     } catch (err) {
       // The player can vanish between the name check and the call; NameOwnerChanged cleans up.
       if (this.player) console.warn(`[mpris] GetAll failed: ${err.message}`);
@@ -289,7 +296,7 @@ class Mpris extends EventEmitter {
     this.s.positionAt = Date.now();
   }
 
-  _apply(c, force, fromSignal = false) {
+  _apply(c, force, fromSignal = false, readAt = Date.now()) {
     const s = this.s;
     let trackChanged = false;
     let jump = force;
@@ -327,12 +334,23 @@ class Mpris extends EventEmitter {
       // A new song: give a greyed (but offered) setting another chance.
       if (trackChanged && !s[missing]) s[ok] = true;
     }
-    if (c.Position) {
+    if (c.Position && !trackChanged && this._staleAfterSeek(Number(c.Position.value) / 1000, readAt)) {
+      // ignore: a reading from before (or just after) our seek, still showing the old spot
+    } else if (c.Position) {
       const reported = Number(c.Position.value) / 1000;
       if (Math.abs(reported - this._positionNow()) > POSITION_JUMP_MS || trackChanged) jump = true;
       this._setPosition(reported);
     }
     this._emit(trackChanged, jump);
+  }
+
+  // A position reading is stale if it was requested before the last seek, or arrives
+  // within SEEK_SETTLE_MS of it and still disagrees (Spotify catches up a moment later).
+  _staleAfterSeek(reportedMs, readAt) {
+    if (!this.seekAt) return false;
+    if (readAt < this.seekAt) return true;
+    const settling = Date.now() - this.seekAt < SEEK_SETTLE_MS;
+    return settling && Math.abs(reportedMs - this._positionNow()) > POSITION_JUMP_MS;
   }
 
   _emit(trackChanged, jump) {

@@ -5,7 +5,7 @@ import { renderBackdrop, Backdrop } from './modules/background.js';
 import { startClock } from './modules/clock.js';
 import { createDock } from './modules/dock.js';
 import { createQueue } from './modules/queue.js';
-import { drawGlow } from './modules/glow.js';
+import { createGlow } from './modules/glow.js';
 import { createPresence } from './modules/presence.js';
 import { setupA11y } from './modules/a11y.js';
 import { createMarquee } from './modules/marquee.js';
@@ -52,7 +52,7 @@ chrome.addEventListener('focusout', (e) => {
 });
 
 const clock = startClock({ root: $('clock'), dateEl: $('clock-date'), timeEl: $('clock-time'), h24: init.clock24h !== false });
-drawGlow([...document.querySelectorAll('.glow__wave')]);
+const glow = createGlow({ root, el: $('glow'), skin });
 const backdrop = new Backdrop($('bg-0'), $('bg-1'));
 const queue = createQueue({ list: $('queue-list'), empty: $('queue-empty') });
 const dock = createDock({
@@ -65,6 +65,7 @@ const dock = createDock({
 
 function setPalette(p) {
   for (const [k, v] of Object.entries(toCss(p))) root.style.setProperty(k, v);
+  glow.render(); // the glow is painted once per palette
 }
 
 function applyClockTint() {
@@ -89,6 +90,7 @@ function update() {
   if (idle && wasIdle === false) presence.enterIdle();
   wasIdle = idle;
   dock.update(player);
+  glow.setPlayer(player);
   renderQueue();
   applyClockTint();
   if (!running && art.name) {
@@ -145,6 +147,7 @@ skin.onHistory((h) => {
   history = h;
   renderQueue();
 });
+skin.onBeat((b) => glow.setBeat(b));
 skin.onPaused((paused) => {
   root.classList.toggle('anim-paused', paused);
   dock.setPaused(paused);
@@ -176,5 +179,6 @@ $('open-spotify').addEventListener('click', () => skin.openSpotify());
 root.classList.toggle('anim-paused', Boolean(init.paused));
 dock.setPaused(Boolean(init.paused));
 mq.setPaused(Boolean(init.paused));
+glow.setBeat(init.beat);
 update();
 loadArt();

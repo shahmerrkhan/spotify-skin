@@ -69,6 +69,7 @@ export function toCss(p) {
   if (!p) {
     return {
       '--dominant': 'oklch(0.24 0.02 300)', '--accent': 'oklch(0.78 0.12 350)', '--accent-2': 'oklch(0.72 0.12 290)',
+      '--glow-3': 'oklch(0.6 0.13 320)',
       '--ink': 'oklch(0.97 0.012 300)', '--clock': 'oklch(0.93 0.04 320)', '--clock-dark': 'oklch(0.27 0.05 300)',
     };
   }
@@ -86,6 +87,8 @@ export function toCss(p) {
     '--dominant': `oklch(${f(Math.min(d.L, 0.32))} ${f(Math.min(d.C, 0.12))} ${f(dh, 1)})`,
     '--accent': acc,
     '--accent-2': acc2,
+    // Third glow colour: the cover's main colour, lit up; deeper than the accents for contrast.
+    '--glow-3': `oklch(0.6 ${f(clamp(d.C * 1.8, 0.08, 0.16))} ${f(dh, 1)})`,
     '--ink': `oklch(0.97 ${f(Math.min(d.C, 0.02))} ${f(dh, 1)})`,
     '--clock': `oklch(0.93 ${f(Math.min(p.accent?.C ?? 0.02, 0.06))} ${f(ah, 1)})`,
     '--clock-dark': `oklch(0.27 ${f(clamp(d.C, 0.03, 0.08))} ${f(dh, 1)})`,

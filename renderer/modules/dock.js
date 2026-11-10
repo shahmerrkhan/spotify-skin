@@ -4,6 +4,10 @@
 
 const SHORT_TITLE = 20; // Homemade Apple up to this many characters, Caveat 700 beyond
 const SEEK_STEP_MS = 5000;
+// After you click the bar, updates that still carry the old spot are ignored for
+// this long (they were on their way before Spotify got the seek).
+const SEEK_HOLD_MS = 1500;
+const SEEK_TOLERANCE_MS = 1500;
 
 export function fmt(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -33,6 +37,7 @@ export function createDock(els, skin, mq) {
   let anims = [];
   let ticker = 0;
   let railWidth = els.rail.clientWidth;
+  let seekHold = null;    // { trackId, until } after a click on the bar
 
   const playing = () => Boolean(player?.running && player.status === 'Playing' && player.track);
   const lengthMs = () => player?.track?.lengthMs || 0;
@@ -89,6 +94,7 @@ export function createDock(els, skin, mq) {
     const target = Math.min(Math.max(0, ms), len);
     // Show it right away; Spotify's answer re-syncs on the next update.
     player = { ...player, positionMs: target, positionAt: Date.now() };
+    seekHold = { trackId: player.track?.id, until: Date.now() + SEEK_HOLD_MS };
     syncProgress();
     skin.seek(target);
   }
@@ -178,7 +184,24 @@ export function createDock(els, skin, mq) {
     els.repeatIcon.setAttribute('href', `/assets/icons/sprite.svg#${loop === 'Track' ? 'i-repeat-one' : 'i-repeat'}`);
   }
 
+  // Keeps the knob where you clicked while stale positions arrive (see SEEK_HOLD_MS).
+  function holdSeek(p) {
+    if (!seekHold || !p?.track || !player?.track) return p;
+    if (Date.now() > seekHold.until || p.track.id !== seekHold.trackId) {
+      seekHold = null;
+      return p;
+    }
+    const mine = positionNow();
+    const theirs = p.status === 'Playing' ? p.positionMs + (Date.now() - p.positionAt) * (p.rate || 1) : p.positionMs;
+    if (Math.abs(theirs - mine) <= SEEK_TOLERANCE_MS) {
+      seekHold = null; // Spotify agrees now
+      return p;
+    }
+    return { ...p, positionMs: mine, positionAt: Date.now() };
+  }
+
   function update(p) {
+    p = holdSeek(p);
     player = p;
     const running = Boolean(p?.running);
     const t = p?.track;

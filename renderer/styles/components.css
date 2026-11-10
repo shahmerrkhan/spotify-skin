@@ -315,33 +315,62 @@
 .btn--primary:hover { background: color-mix(in oklab, var(--ink) 88%, var(--accent)); }
 .btn:active { transform: scale(0.97); transition-duration: 80ms; }
 
-/* ---------- Edge glow: on top of everything, never takes clicks ---------- */
+/* ---------- Edge glow: on top of everything, never takes clicks ----------
+   Brightness = glow level (Aa menu) x state: half while paused or in the minimal
+   state. The canvases are painted once per song by modules/glow.js; everything
+   here only moves or fades them (compositor work, no repainting). */
 .glow {
   position: fixed; z-index: 10; pointer-events: none;
   top: var(--safe-top); right: var(--safe-right); bottom: var(--safe-bottom); left: var(--safe-left);
-  opacity: var(--glow-opacity);
   overflow: hidden;
+  --glow-state: 0.5;
+  opacity: calc(var(--glow-level) * var(--glow-state) * var(--glow-contrast, 1));
+  transition: opacity 1.2s ease;
 }
+.is-playing:not(.is-calm) .glow { --glow-state: 1; }
+.glow__beat { position: absolute; inset: 0; }
+.glow__edge { position: absolute; overflow: hidden; }
+.glow__edge--top    { top: 0; left: 0; right: 0; height: 300px; transform-origin: 50% 0; }
+.glow__edge--bottom { bottom: 0; left: 0; right: 0; height: 300px; transform-origin: 50% 100%; }
+.glow__edge--left   { left: 0; top: 0; bottom: 0; width: 300px; transform-origin: 0 50%; }
+.glow__edge--right  { right: 0; top: 0; bottom: 0; width: 300px; transform-origin: 100% 50%; }
+.glow__strip { position: absolute; display: block; will-change: transform; }
+.glow__edge--top .glow__strip    { top: 0; left: 0; }
+.glow__edge--bottom .glow__strip { bottom: 0; left: 0; }
+.glow__edge--left .glow__strip   { left: 0; top: 0; }
+.glow__edge--right .glow__strip  { right: 0; top: 0; }
+/* Warm peach/orange corners like the reel, nudged toward the cover's accent */
+.glow__corner {
+  position: absolute; width: 560px; height: 560px;
+  background: radial-gradient(closest-side,
+    color-mix(in oklch, var(--warm) 78%, var(--accent)) 0%,
+    color-mix(in oklch, var(--warm-2) 55%, transparent) 38%,
+    transparent 100%);
+  opacity: 0.85;
+}
+.glow__corner--tl { top: -280px; left: -280px; }
+.glow__corner--tr { top: -280px; right: -280px; }
+.glow__corner--br { bottom: -280px; right: -280px; }
+.glow__corner--bl { bottom: -280px; left: -280px; }
 .glow__rim {
   position: absolute; inset: 0;
-  box-shadow:
-    inset 0 0 0 2px var(--accent),
-    inset 0 0 42px 2px color-mix(in oklab, var(--accent-2) 80%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in oklch, var(--accent) 80%, white);
+  opacity: 0.6;
 }
-.glow__band {
-  position: absolute; left: 0; width: 200%; height: 48px;
-  will-change: transform;
-  animation: drift 32s linear infinite;
-}
-.glow__band--top { top: -14px; }
-.glow__band--bottom { bottom: -14px; animation-duration: 41s; animation-direction: reverse; }
-.glow__wave { display: block; width: 100%; height: 100%; overflow: visible; }
-.glow__soft { fill: none; stroke-width: 26; opacity: 0.85; }
-.glow__line { fill: none; stroke-width: 3; }
-.glow__band--top .glow__soft, .glow__band--top .glow__line { stroke: var(--accent); }
-.glow__band--bottom .glow__soft, .glow__band--bottom .glow__line { stroke: var(--accent-2); }
-@keyframes drift { to { transform: translateX(-50%); } }
 
 /* ---------- Motion switches ---------- */
 .anim-paused *, .anim-paused *::before, .anim-paused *::after { animation-play-state: paused !important; }
-.reduce-motion .record__disc, .reduce-motion .glow__band { animation: none; }
+.reduce-motion .record__disc { animation: none; }
+.reduce-motion .glow { transition: none; }
+
+/* ---------- Aa menu: edge glow level ---------- */
+.seg { display: grid; gap: 6px; padding: 9px 10px 6px 12px; }
+.seg__label { --fs: 21; font-weight: 600; }
+.seg__opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border-radius: 12px; background: rgb(255 255 255 / 0.08); }
+.seg__opt {
+  --fs: 19; font-weight: 600;
+  padding: 5px 0; border-radius: 9px;
+  transition: background-color var(--dur-fast) linear;
+}
+.seg__opt:hover { background: rgb(255 255 255 / 0.08); }
+.seg__opt[aria-checked="true"] { background: color-mix(in oklab, var(--accent) 70%, black); color: var(--ink); }

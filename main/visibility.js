@@ -86,6 +86,7 @@ class Visibility extends EventEmitter {
     this.flags = { covered: false, locked: false, saver: false, asleep: false };
     this.paused = false;
     this.active = undefined;
+    this.ignoreCovered = false;
   }
 
   set(flag, value) {
@@ -127,6 +128,8 @@ class Visibility extends EventEmitter {
   }
 
   async _isCovered() {
+    // Dev only: SKIN_IGNORE_COVERED=1 keeps animations running under other windows (CPU measurements).
+    if (this.ignoreCovered) return false;
     const own = this.getXid();
     const b = this.getBounds();
     if (!own || !b) return null;

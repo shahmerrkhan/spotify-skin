@@ -17,6 +17,7 @@ const history = require('./history');
 const { Mpris } = require('./mpris');
 const { Visibility, isDesktopWindow } = require('./visibility');
 const { SpotifyApp } = require('./spotify-app');
+const { Tempo } = require('./tempo');
 
 const DEV = process.argv.includes('--dev');
 const DEVTOOLS = DEV && !process.argv.includes('--no-devtools');
@@ -41,6 +42,8 @@ let mpris = null;
 let visibility = null;
 let currentArt = { trackId: '', name: null }; // cover of the track Spotify is on now
 let uiPaused = false;
+let tempo = null;
+let glowWanted = false;   // the UI is showing the beat pulse (playing, awake, motion on)
 let spotifyApp = null;
 let quitting = false;
 let launches = [];        // when the skin last started Spotify (relaunch rate limit)
@@ -81,6 +84,7 @@ function hide() {
 function afterClose() {
   visibility?.stop();
   uiPaused = false;
+  updateTempoWanted();
   mpris?.setActive(false);
   clearTimeout(relaunchTimer);
   spotifyApp?.release(); // Spotify back in the taskbar (minimised) while the skin is hidden
@@ -114,6 +118,7 @@ function onPlayerState(state, { trackChanged }) {
     wasRunning = state.running;
     rebuildTrayMenu();
   }
+  tempo?.setTrack(state.running ? state.track : null);
   if (!state.running) {
     // Spotify quit: never leave album art behind as the wallpaper.
     currentArt = { trackId: '', name: null };
@@ -191,7 +196,9 @@ async function startServices() {
     if (DEV) log(`animations ${paused ? 'paused' : 'running'}`, JSON.stringify(flags));
     windowMgr.send('skin:paused', paused);
     mpris?.setActive(windowMgr.isOpen() && !paused);
+    updateTempoWanted();
   });
+  visibility.ignoreCovered = DEV && process.env.SKIN_IGNORE_COVERED === '1';
   visibility.on('active', (id) => onActiveWindow(id).catch(() => {}));
   powerMonitor.on('suspend', () => visibility.set('asleep', true));
   powerMonitor.on('resume', () => visibility.set('asleep', false));
@@ -209,6 +216,15 @@ async function startServices() {
   });
   spotifyApp.on('error', (err) => notify(`Couldn't start Spotify (${err.message}).`));
   spotifyApp.on('change', rebuildTrayMenu);
+  // The glow's beat: Spotify's own sound stream (the mock's in dev).
+  tempo = new Tempo({
+    getState: () => mpris?.state(),
+    matchStream: mprisBus !== sessionBus
+      ? (p) => p['application.name'] === 'spotify-mock'
+      : (p) => /^spotify$/i.test(p['application.name'] || '') || /^spotify$/i.test(p['application.process.binary'] || '')
+        || p['application.id'] === 'com.spotify.Client' || p['pipewire.access.portal.app_id'] === 'com.spotify.Client',
+  });
+  tempo.on('beat', (info) => windowMgr.send('skin:beat', info));
   mpris = new Mpris(mprisBus);
   mpris.on('state', onPlayerState);
   try {
@@ -216,6 +232,11 @@ async function startServices() {
   } catch (err) {
     console.error('[skin] MPRIS unavailable:', err.message);
   }
+}
+
+// Listen for the beat only while the pulse is really on screen.
+function updateTempoWanted() {
+  tempo?.setWanted(glowWanted && windowMgr.isOpen() && !uiPaused);
 }
 
 // Tray
@@ -316,6 +337,7 @@ function registerIpc() {
       player: mpris ? mpris.state() : null,
       art: currentArt,
       history: history.list(),
+      beat: tempo ? tempo.current() : null,
     };
   });
 
@@ -345,10 +367,21 @@ function registerIpc() {
     wallpaper.queueImage(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length));
   });
 
+  ipcMain.on('skin:glow-want', (event, on) => {
+    if (!fromUi(event)) return;
+    glowWanted = Boolean(on);
+    updateTempoWanted();
+  });
+
   ipcMain.on('skin:a11y', (event, a) => {
     if (!fromUi(event) || !a || typeof a !== 'object') return;
     const pick = (v) => (v === null ? null : Boolean(v));
-    cfg.a11y = { reducedMotion: pick(a.reducedMotion), largeText: Boolean(a.largeText), highContrast: Boolean(a.highContrast) };
+    cfg.a11y = {
+      reducedMotion: pick(a.reducedMotion),
+      largeText: Boolean(a.largeText),
+      highContrast: Boolean(a.highContrast),
+      glow: ['low', 'medium', 'high'].includes(a.glow) ? a.glow : 'medium',
+    };
     try {
       config.save(cfg);
     } catch (err) {
@@ -382,6 +415,7 @@ function cleanup(reason) {
   clearTimeout(relaunchTimer);
   globalShortcut.unregisterAll();
   visibility?.stop();
+  tempo?.stop();
   spotifyApp?.release();
   restoreWallpaper(reason);
 }

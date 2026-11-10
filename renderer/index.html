@@ -43,6 +43,14 @@
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="reducedMotion"><span class="switch__label">Reduce motion</span><span class="switch__track" aria-hidden="true"></span></button>
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="largeText"><span class="switch__label">Larger text</span><span class="switch__track" aria-hidden="true"></span></button>
           <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="highContrast"><span class="switch__label">Higher contrast</span><span class="switch__track" aria-hidden="true"></span></button>
+          <div class="seg" role="radiogroup" aria-labelledby="glow-label">
+            <span class="seg__label cav" id="glow-label">Edge glow</span>
+            <div class="seg__opts">
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-glow="low">Low</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-glow="medium">Medium</button>
+              <button class="seg__opt cav" type="button" role="radio" aria-checked="false" data-glow="high">High</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -95,11 +103,20 @@
     <button class="btn btn--primary cav" id="open-spotify" type="button">Open Spotify</button>
   </section>
 
-  <!-- Edge glow: thin neon rim plus a slow wavy band, colors from the art, drawn above the panels -->
-  <div class="glow" aria-hidden="true">
-    <div class="glow__rim"></div>
-    <div class="glow__band glow__band--top"><svg class="glow__wave" viewBox="0 0 3840 48" preserveAspectRatio="none"><path id="wave-top"/></svg></div>
-    <div class="glow__band glow__band--bottom"><svg class="glow__wave" viewBox="0 0 3840 48" preserveAspectRatio="none"><path id="wave-bottom"/></svg></div>
+  <!-- Edge glow: a thick wavy band of the cover's colours on all four edges, warm corners,
+       pulsing with the beat. Painted once per song; only slid and faded after that. -->
+  <div class="glow" id="glow" aria-hidden="true">
+    <div class="glow__beat">
+      <div class="glow__edge glow__edge--top"><canvas class="glow__strip"></canvas></div>
+      <div class="glow__edge glow__edge--right"><canvas class="glow__strip"></canvas></div>
+      <div class="glow__edge glow__edge--bottom"><canvas class="glow__strip"></canvas></div>
+      <div class="glow__edge glow__edge--left"><canvas class="glow__strip"></canvas></div>
+      <div class="glow__corner glow__corner--tl"></div>
+      <div class="glow__corner glow__corner--tr"></div>
+      <div class="glow__corner glow__corner--br"></div>
+      <div class="glow__corner glow__corner--bl"></div>
+      <div class="glow__rim"></div>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>

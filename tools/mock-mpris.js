@@ -12,6 +12,14 @@
 // Signals act like changing it in Spotify's own window (announced to the skin):
 //   kill -USR1 <pid>  cycles repeat     kill -USR2 <pid>  toggles shuffle
 //
+// --audio <bpm>: while "playing", plays a drum loop at that tempo as an audio stream
+// named "spotify-mock", at a volume too low to hear (0.002), so the skin's beat
+// listening can be tested end to end without real music. Needs pw-play (PipeWire).
+//
+// --art-url <url>: report this cover address for every song instead of the local
+// images (e.g. an https://i.scdn.co/... address, to test the cover download and its
+// fallback when it fails).
+//
 // --window opens a stand-in "Spotify window" (xmessage, instance name "spotify") so
 // the skin's hide-Spotify's-window logic can be tested; it closes when the mock exits.
 //
@@ -30,10 +38,12 @@ const arg = (name, dflt) => {
 };
 const DIR = arg('dir', '/usr/share/xfce4/backdrops');
 const AUTO_MS = Number(arg('auto', 0));
+const ART_URL = arg('art-url', '');
 const COUNT = Number(arg('count', 0));
 const QUIT_AFTER = process.argv.includes('--quit-after');
 const WINDOW = process.argv.includes('--window');
 const IGNORE_SETS = process.argv.includes('--ignore-sets');
+const AUDIO_BPM = Number(arg('audio', 0));
 
 const TITLES = [
   ['Love Me', 'Lil Tecca'], ['Lucid Dreams', 'Juice WRLD'], ['Ransom', 'Lil Tecca'],
@@ -66,7 +76,7 @@ function metadata() {
   return {
     'mpris:trackid': new Variant('o', `/com/spotify/track/mock${index}`),
     'mpris:length': new Variant('t', BigInt(t.lengthMs * 1000)),
-    'mpris:artUrl': new Variant('s', `file://${encodeURI(t.art)}`),
+    'mpris:artUrl': new Variant('s', ART_URL || `file://${encodeURI(t.art)}`),
     'xesam:title': new Variant('s', t.title),
     'xesam:artist': new Variant('as', [t.artist]),
     'xesam:album': new Variant('s', 'Mock Album'),
@@ -166,10 +176,62 @@ process.on('SIGUSR2', () => {
   console.log(`[mock] shuffle changed by Spotify itself: ${shuffle}`);
 });
 
+// Test audio: a drum loop (kick on every beat, snare on 2 and 4, hats on 8ths).
+let audioFile = null;
+let audioProc = null;
+function makeDrumLoop(bpm) {
+  const os = require('node:os');
+  const rate = 22050;
+  const secs = 30;
+  const n = rate * secs;
+  const data = Buffer.alloc(44 + n * 2);
+  let seed = 1;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648) * 2 - 1;
+  const T = 60 / bpm;
+  for (let i = 0; i < n; i++) {
+    const t = i / rate;
+    const beat = Math.floor(t / T);
+    const ph = t - beat * T;
+    let v = Math.sin(2 * Math.PI * 55 * ph) * Math.exp(-ph * 18);
+    if (beat % 2 === 1) v += 0.6 * rnd() * Math.exp(-ph * 25);
+    v += 0.2 * rnd() * Math.exp(-((t % (T / 2)) * 80));
+    data.writeInt16LE(Math.round(Math.max(-1, Math.min(1, v * 0.5)) * 32767), 44 + i * 2);
+  }
+  data.write('RIFF', 0); data.writeUInt32LE(36 + n * 2, 4); data.write('WAVE', 8);
+  data.write('fmt ', 12); data.writeUInt32LE(16, 16); data.writeUInt16LE(1, 20); data.writeUInt16LE(1, 22);
+  data.writeUInt32LE(rate, 24); data.writeUInt32LE(rate * 2, 28); data.writeUInt16LE(2, 32); data.writeUInt16LE(16, 34);
+  data.write('data', 36); data.writeUInt32LE(n * 2, 40);
+  const file = path.join(os.tmpdir(), `mock-drums-${bpm}.wav`);
+  fs.writeFileSync(file, data);
+  return file;
+}
+function syncAudio() {
+  if (!AUDIO_BPM) return;
+  if (status === 'Playing' && !audioProc) {
+    audioFile ||= makeDrumLoop(AUDIO_BPM);
+    const { spawn } = require('node:child_process');
+    audioProc = spawn('pw-play', ['--volume', '0.002', '-P', '{ application.name = "spotify-mock" node.name = "spotify-mock" }', audioFile], { stdio: 'ignore' });
+    const me = audioProc;
+    me.on('exit', () => {
+      if (audioProc === me) {
+        audioProc = null;
+        syncAudio(); // loop
+      }
+    });
+  } else if (status !== 'Playing' && audioProc) {
+    const p = audioProc;
+    audioProc = null;
+    p.kill();
+  }
+}
+process.on('exit', () => audioProc?.kill());
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => process.exit(0));
+
 function setStatus(s) {
   posMs = position();
   posAt = Date.now();
   status = s;
+  syncAudio();
   Interface.emitPropertiesChanged(player, { PlaybackStatus: status }, []);
   console.log(`[mock] ${status}`);
 }
@@ -194,13 +256,14 @@ function go(step) {
     process.exit(1);
   }
   console.log(`[mock] playing; ${images.length} covers from ${DIR}. Keys: n b p s q`);
+  syncAudio();
 
   if (WINDOW) {
     const { spawn } = require('node:child_process');
     const win = spawn('xmessage', ['-name', 'spotify', '-geometry', '640x360+200+200', 'Mock Spotify window'], { stdio: 'ignore' });
     win.on('error', (err) => console.error(`[mock] no stand-in window: ${err.message}`));
     process.on('exit', () => win.kill());
-    for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => process.exit(0));
+
   }
 
   if (AUTO_MS > 0) {
