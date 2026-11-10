@@ -1,51 +1,83 @@
-/* Design tokens.
-   Only neutrals are hard-coded. From phase 2, every hue comes from the album art
-   as --art-dominant / --art-accent, set at runtime. */
+/* Design tokens. Blend A from the approved specimen: Caveat writes, Reenie Beanie
+   and Homemade Apple sign. Neutrals are fixed; every hue comes from the album art
+   at runtime (--dominant, --accent, --accent-2, --ink, --clock), set by palette.js. */
+
+/* Fonts load lazily: Chromium only fetches a face once text on screen uses it,
+   so Homemade Apple stays unloaded until the first short title. Latin only for now (CJK is phase 2c). */
+@font-face { font-family: "Caveat"; src: url(/assets/fonts/Caveat-VF.ttf) format("truetype"); font-weight: 400 700; font-display: block; }
+@font-face { font-family: "Reenie Beanie"; src: url(/assets/fonts/ReenieBeanie.ttf) format("truetype"); font-display: block; }
+@font-face { font-family: "Homemade Apple"; src: url(/assets/fonts/HomemadeApple-Regular.ttf) format("truetype"); font-display: block; }
 
 :root {
   color-scheme: dark;
 
-  /* Neutrals, slightly warm so they sit under any album palette */
+  /* Neutrals */
   --ink-950: oklch(0.135 0.004 70);
   --ink-900: oklch(0.19 0.005 70);
-  --text-1: oklch(0.96 0.005 80);
-  --text-2: oklch(0.96 0.005 80 / 0.66);
-  --text-3: oklch(0.96 0.005 80 / 0.52);
+  --on-ink: #141015;               /* text on the light play button */
+
+  /* Art palette (fallback until the first cover arrives) */
+  --dominant: oklch(0.24 0.02 300);
+  --accent: oklch(0.78 0.12 350);
+  --accent-2: oklch(0.72 0.12 290);
+  --ink: oklch(0.97 0.012 300);
+  --clock: oklch(0.93 0.04 320);
+  --clock-shadow: 0 0 2px rgb(0 0 0 / 0.3), 0 0 22px rgb(0 0 0 / 0.42), 0 8px 44px rgb(0 0 0 / 0.38);
+
+  /* Type: sizes are written in "Caveat px"; Reenie and Apple are scaled to the same x-height */
+  --ts: 1;                          /* Larger text multiplies this */
+  --k-cav: 1;
+  --k-ree: 0.848;
+  --k-app: 0.65;
+  --ink-2-a: 0.9;
+  --ink-3-a: 0.84;
+  --halo: 0 0 0 transparent;
+  --font-ui: "Caveat", system-ui, sans-serif;
 
   /* Glass */
-  --glass-fill: oklch(1 0 0 / 0.075);
-  --glass-fill-hover: oklch(1 0 0 / 0.12);
-  --glass-line: oklch(1 0 0 / 0.14);
-  --glass-line-hover: oklch(1 0 0 / 0.22);
-  --glass-blur: 28px;
-  --glass-saturate: 1.5;
-  --shadow-float:
-    0 10px 30px -12px oklch(0 0 0 / 0.55),
-    0 2px 6px -2px oklch(0 0 0 / 0.35);
+  --glass-fill: rgb(14 11 16 / 0.62);
+  --glass-line: rgb(255 255 255 / 0.12);
+  --glass-blur: 26px;
+  --shadow: 0 24px 60px -24px rgb(0 0 0 / 0.6), 0 4px 14px -6px rgb(0 0 0 / 0.45);
 
-  /* Shape and space */
-  --radius-pill: 999px;
-  --radius-panel: 22px;
-  --inset: 28px;
+  /* Glow: never above 35% */
+  --glow-opacity: 0.3;
 
-  /* Icons: 24px grid, one stroke weight everywhere */
+  /* Layout: space the XFCE panel takes at each edge (desktop layer), set by app.js */
+  --safe-top: 0px;
+  --safe-right: 0px;
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+
+  /* Icons */
   --icon-stroke: 1.75;
-
-  /* Type. Phase 2 swaps in bundled faces (condensed display + tight sans). */
-  --font-ui: system-ui, sans-serif;
 
   /* Motion */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: linear(0, 0.06 2.4%, 0.23 5.2%, 0.69 12.2%, 0.88 16.4%, 1.01 21.4%, 1.05 25.4%, 1.06 29.6%, 1.04 35.6%, 1.01 44.4%, 0.995 54%, 1);
   --dur-fast: 140ms;
   --dur-med: 320ms;
-  --dur-slow: 620ms;
+  --dur-slow: 650ms;
+  --dur-art: 250ms;                 /* background crossfade on song change */
+  --dur-chrome: 450ms;              /* panels fading to and from the minimal state */
 }
 
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --dur-fast: 0ms;
-    --dur-med: 0ms;
-    --dur-slow: 0ms;
-  }
+:root.large { --ts: 1.2; }
+
+:root.contrast {
+  --glass-fill: rgb(10 8 12 / 0.8);
+  --glass-line: rgb(255 255 255 / 0.24);
+  --ink-2-a: 0.97;
+  --ink-3-a: 0.93;
+  --halo: 0 0 1px rgb(0 0 0 / 0.9), 0 1px 3px rgb(0 0 0 / 0.6);
+  --glow-opacity: 0.22;
+}
+
+/* Reduced motion: no spin, no drift, no movement. Fades become near-instant. */
+:root.reduce-motion {
+  --dur-fast: 0ms;
+  --dur-med: 0ms;
+  --dur-slow: 0ms;
+  --dur-art: 0ms;
+  --dur-chrome: 120ms;
 }

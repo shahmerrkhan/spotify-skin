@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon system: 24px grid, 1.75 stroke, round caps and joins, stroke color inherited from CSS.
+       Used as <svg class="icon"><use href="/assets/icons/sprite.svg#i-play"/></svg>. -->
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6.5 6v12"/><path d="M18 6.5 10 12l8 5.5z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M17.5 6v12"/><path d="M6 6.5 14 12l-8 5.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6.5v11"/><path d="M15 6.5v11"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.5 5.8v12.4L18.2 12z"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 3.5 3 3-3 3"/><path d="M4 11.5v-1a4 4 0 0 1 4-4h12"/><path d="m7 20.5-3-3 3-3"/><path d="M20 12.5v1a4 4 0 0 1-4 4H4"/></symbol>
+  <symbol id="i-repeat-one" viewBox="0 0 24 24"><path d="m17 3.5 3 3-3 3"/><path d="M4 11.5v-1a4 4 0 0 1 4-4h12"/><path d="m7 20.5-3-3 3-3"/><path d="M20 12.5v1a4 4 0 0 1-4 4H4"/><path d="M10.9 10.3 12.4 9.4v5.2" stroke-width="1.7"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="m17.5 4 3 3-3 3"/><path d="M3.5 17h3.2a4 4 0 0 0 3.3-1.8l4-6.4A4 4 0 0 1 17.3 7h3.2"/><path d="m17.5 14 3 3-3 3"/><path d="M3.5 7h3.2a4 4 0 0 1 3.1 1.5"/><path d="M14.2 15.5a4 4 0 0 0 3.1 1.5h3.2"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 19.5s-7-4.3-7-9.6A3.9 3.9 0 0 1 12 7.6a3.9 3.9 0 0 1 7 2.3c0 5.3-7 9.6-7 9.6z"/></symbol>
+  <symbol id="i-hide" viewBox="0 0 24 24"><path d="m7 8.5 5 5 5-5"/><path d="M5.5 18.5h13"/></symbol>
+  <symbol id="i-spotify-off" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.25"/><path d="M8 10.2c2.7-.8 5.6-.5 8 .9"/><path d="M8.6 13.3c2.1-.6 4.3-.4 6.2.7"/><path d="m4.5 4.5 15 15"/></symbol>
+</svg>

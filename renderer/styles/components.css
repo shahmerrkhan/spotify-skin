@@ -1,0 +1,347 @@
+/* Layout is drawn for 1920x1080 like the specimen. --safe-* keep things clear of
+   the XFCE panel in the desktop layer.
+
+   Root states (set by app.js on <html>):
+   .is-idle     Spotify stopped, paused or closed: clock moves to the center, bigger
+   .is-calm     no mouse movement for minimalAfterSec: glass panels fade (minimal state)
+   .is-playing  record spins, tonearm on the record
+   .no-spotify  Spotify isn't running: notice card, controls disabled
+   .anim-paused screen locked / asleep / window fully covered: every animation stops
+   .clock-dark  very bright art behind the clock: dark-tinted clock */
+
+/* ---------- Background ---------- */
+.backdrop {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(90% 80% at 78% 8%, var(--ink-900), transparent 70%),
+    var(--ink-950);
+}
+.backdrop__img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--dur-art) linear;
+}
+.backdrop__img.is-on { opacity: 1; }
+
+/* ---------- Clock ---------- */
+.clock {
+  position: fixed; z-index: 1;
+  top: calc(34px + var(--safe-top));
+  right: calc(76px + var(--safe-right));
+  text-align: right;
+  color: var(--clock-now, var(--clock));
+  text-shadow: var(--clock-shadow), var(--halo);
+  transform-origin: 50% 50%;
+  transition: transform var(--dur-slow) var(--ease-out-expo), color var(--dur-med) linear;
+}
+.clock__date { display: block; --fs: 40; margin-right: 10px; margin-bottom: -18px; }
+.clock__time {
+  display: block;
+  font-family: "Caveat", cursive; font-weight: 500;
+  font-size: 300px; line-height: 1; letter-spacing: -0.02em; /* already huge: not scaled by Larger text */
+}
+.clock__d { display: inline-block; width: 0.44em; text-align: center; }
+.clock__c { display: inline-block; width: 0.2em; text-align: center; transform: translateY(-0.04em); }
+.clock__ampm { font-size: 0.16em; margin-left: 0.15em; letter-spacing: 0; }
+
+/* Idle: from the top right to the middle of the screen, 1.35x. The translate is
+   relative to the clock's own box, so it lands centred whatever the digits are. */
+.is-idle .clock {
+  transform:
+    translate(calc(-50vw + 76px + var(--safe-right) + 50%), calc(44vh - 34px - var(--safe-top) - 50%))
+    scale(1.35);
+}
+.is-idle .clock__date { text-align: center; margin-right: 0; }
+
+.clock-dark .clock {
+  text-shadow: 0 0 2px rgb(255 255 255 / 0.25), 0 0 26px rgb(255 255 255 / 0.32), var(--halo);
+}
+
+/* ---------- Now playing, bottom left ---------- */
+.now {
+  position: fixed; z-index: 1;
+  left: calc(60px + var(--safe-left));
+  bottom: calc(44px + var(--safe-bottom));
+  width: 360px;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.55), var(--halo);
+}
+.now__title.app { --fs: 64; }
+.now__title.cav { --fs: 58; font-weight: 700; }
+.now__artist { --fs: 46; margin-top: 2px; }
+
+/* ---------- Chrome: everything that fades in the minimal state ---------- */
+.chrome {
+  position: relative; z-index: 2;
+  transition: opacity var(--dur-chrome) var(--ease-out-expo);
+}
+.is-calm .chrome {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-chrome) var(--ease-out-expo), visibility 0s linear var(--dur-chrome);
+}
+
+/* ---------- Pills: Hide + display options ---------- */
+.pills {
+  position: fixed; z-index: 2; /* the Aa menu opens over the tilted queue panel */
+  top: calc(28px + var(--safe-top));
+  left: calc(28px + var(--safe-left));
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.pill {
+  --fs: 19;
+  display: inline-flex; align-items: center; gap: 8px;
+  height: calc(34px * var(--ts)); padding: 0 14px 0 11px;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: transform var(--dur-med) var(--ease-spring), background-color var(--dur-fast) linear;
+}
+.pill .icon { width: 17px; height: 17px; }
+.pill:hover { background-color: rgb(255 255 255 / 0.08); transform: translateY(-1px); }
+.pill:active { transform: scale(0.97); transition-duration: 80ms; }
+.pill--aa { padding: 0 13px; }
+
+.a11y { position: relative; }
+.a11y-menu {
+  position: absolute; top: calc(100% + 8px); left: 0;
+  width: calc(250px * var(--ts));
+  padding: 8px; border-radius: 18px;
+  display: grid; gap: 2px;
+}
+.switch {
+  --fs: 21;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  width: 100%; padding: 9px 10px 9px 12px; border-radius: 12px;
+  font-weight: 600; text-align: left;
+}
+.switch:hover { background: rgb(255 255 255 / 0.07); }
+.switch__track {
+  position: relative; flex: none;
+  width: 36px; height: 20px; border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  transition: background-color var(--dur-fast) linear;
+}
+.switch__track::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--ink);
+  transition: transform var(--dur-med) var(--ease-spring);
+}
+.switch[aria-checked="true"] .switch__track { background: color-mix(in oklab, var(--accent) 85%, black); }
+.switch[aria-checked="true"] .switch__track::after { transform: translateX(16px); }
+
+/* ---------- Queue: a physical panel turned in space like the reel ----------
+   Hinged on its left edge, the right side recedes. One static transform, so the
+   GPU composites it once; nothing animates behind it. */
+.queue {
+  position: fixed;
+  left: calc(60px + var(--safe-left));
+  top: calc(196px + var(--safe-top));
+  width: 410px;
+  max-height: calc(100vh - 196px - var(--safe-top) - 270px - var(--safe-bottom));
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  padding: 22px 18px 10px;
+  border-radius: 22px;
+  transform-origin: 0% 50%;
+  transform: perspective(1500px) rotateY(17deg);
+  box-shadow: 18px 30px 60px -22px rgb(0 0 0 / 0.65), 4px 6px 16px -8px rgb(0 0 0 / 0.45);
+  -webkit-mask-image: linear-gradient(#000 62%, transparent 99%);
+}
+/* Fallback if live blur misbehaves on the tilted panel: a denser fill instead */
+.queue.no-live-blur { backdrop-filter: none; background: url(/assets/textures/grain.png) repeat, rgb(18 14 20 / 0.78); }
+.queue__h { --fs: 40; line-height: 1; padding: 0 8px; flex: none; }
+.queue__sub { --fs: 18; display: block; padding: 2px 8px 14px; font-weight: 500; flex: none; }
+
+/* The list scrolls with the mouse wheel inside the tilted panel. Its bottom padding
+   lets the last song scroll up out of the panel's fade; the list's own edges fade
+   only where there's more to scroll to. */
+.queue__list {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  margin: 0 -10px; padding: 0 10px 150px; /* room for the hero row's glow ring */
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.22) transparent;
+  --fade-top: 0px;
+  -webkit-mask-image: linear-gradient(transparent, #000 var(--fade-top), #000);
+}
+.queue__list.more-above { --fade-top: 34px; }
+.queue__empty { --fs: 20; padding: 8px; }
+
+.row { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; padding: 7px 8px; border-radius: 14px; }
+.row__art {
+  width: 44px; height: 44px; border-radius: 8px; object-fit: cover;
+  background: linear-gradient(135deg, var(--accent-2), var(--dominant));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+.row__text { min-width: 0; }
+.row__t { --fs: 21; font-weight: 600; }
+.row__a { --fs: 17; font-weight: 500; }
+.row--hero {
+  grid-template-columns: 58px 1fr; padding: 11px 12px; margin: 2px -6px 8px;
+  background: url(/assets/textures/grain.png) repeat, rgb(255 255 255 / 0.1);
+  border: 1px solid color-mix(in oklab, var(--accent) 70%, white);
+  box-shadow: 0 16px 34px -14px rgb(0 0 0 / 0.6), 0 0 0 4px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+.row--hero .row__art { width: 58px; height: 58px; border-radius: 10px; }
+.row--hero .row__t { --fs: 25; }
+.row--hero .row__a { --fs: 19; }
+.row:nth-child(n+4) { opacity: 0.86; }
+.row:nth-child(n+6) { opacity: 0.74; }
+
+/* ---------- Dock: record + control bar ---------- */
+.dock {
+  position: fixed; left: 50%;
+  bottom: calc(34px + var(--safe-bottom));
+  width: 1000px;
+  transform: translateX(-50%);
+}
+.controls {
+  position: relative;
+  min-height: 104px; border-radius: 26px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 22px 10px 132px;
+}
+
+.ctl {
+  width: 46px; height: 46px; border-radius: 999px; flex: none;
+  display: grid; place-items: center;
+  transition: background-color var(--dur-fast) linear, transform var(--dur-med) var(--ease-spring), opacity var(--dur-fast) linear;
+}
+.ctl:hover:not(:disabled):not(.is-off) { background: rgb(255 255 255 / 0.1); }
+.ctl:active:not(:disabled):not(.is-off) { transform: scale(0.93); transition-duration: 80ms; }
+.ctl--play { width: 54px; height: 54px; background: var(--ink); color: var(--on-ink); }
+.ctl--play:hover:not(:disabled) { background: color-mix(in oklab, var(--ink) 88%, var(--accent)); }
+.ctl:disabled, .ctl.is-off { opacity: 0.38; cursor: default; }
+.ctl.is-off.is-retry { cursor: pointer; } /* greyed because Spotify didn't apply it: a click tries again */
+.ctl--toggle { position: relative; }
+.ctl--toggle[aria-pressed="true"] { color: color-mix(in oklab, var(--accent) 80%, white); }
+.ctl--toggle[aria-pressed="true"]::after {
+  content: ""; position: absolute; bottom: 5px; left: 50%;
+  width: 4px; height: 4px; margin-left: -2px; border-radius: 50%;
+  background: currentColor;
+}
+
+.track {
+  flex: 1; min-width: 0;
+  display: grid; grid-template-columns: 1fr auto; column-gap: 14px;
+  margin: 4px 0 0 20px;
+}
+.track__title { grid-column: 1; }
+.track__title.app { --fs: 34; }
+.track__title.cav { --fs: 30; font-weight: 700; }
+.track__artist { grid-column: 1; --fs: 28; margin-top: 1px; }
+.track__heart { grid-column: 2; grid-row: 1 / 3; align-self: center; opacity: 0.38; }
+
+.progress { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin-top: 2px; }
+.progress__time { --fs: 18; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 2.6em; }
+.progress__time:last-child { text-align: right; }
+.progress__rail { position: relative; height: 18px; cursor: pointer; border-radius: 6px; }
+.progress__rail::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 3px; margin-top: -1.5px;
+  border-radius: 3px; background: rgb(255 255 255 / 0.18);
+}
+.progress__fill {
+  position: absolute; left: 0; top: 50%; width: 100%; height: 3px; margin-top: -1.5px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--accent) 80%, white);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 60%, transparent);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+.progress__knob {
+  position: absolute; left: -5px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
+  border-radius: 50%; background: var(--ink);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+.no-spotify .progress__rail, .progress__rail[aria-disabled="true"] { cursor: default; }
+
+/* Record: small, spinning, at the left of the bar, with a tonearm */
+.record {
+  position: absolute; left: -22px; top: -42px;
+  width: 150px; height: 150px; border-radius: 50%;
+  box-shadow: 0 18px 40px -12px rgb(0 0 0 / 0.7);
+}
+.record__disc {
+  position: absolute; inset: 0; border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 23%, rgb(255 255 255 / 0.05) 23.5%, transparent 24.5%),
+    conic-gradient(from 30deg, transparent 0 12%, rgb(255 255 255 / 0.07) 16%, transparent 22% 62%, rgb(255 255 255 / 0.05) 66%, transparent 72%),
+    repeating-radial-gradient(circle, #121014 0 2px, #1b181d 2px 3px),
+    #111;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  animation: spin 1.8s linear infinite;   /* 33 1/3 rpm */
+  animation-play-state: paused;
+}
+.record__disc::before {                   /* label colour shows until the cover loads */
+  content: ""; position: absolute; inset: 31%; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--dominant));
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.5);
+}
+.record__label { position: absolute; inset: 31%; width: 38%; height: 38%; border-radius: 50%; object-fit: cover; }
+.record__disc::after { content: ""; position: absolute; inset: 48.5%; border-radius: 50%; background: #0c0b0d; z-index: 1; }
+.is-playing .record__disc { animation-play-state: running; }
+@keyframes spin { to { transform: rotate(1turn); } }
+
+.arm {
+  position: absolute; left: 88px; top: -22px; width: 72px; height: 96px;
+  color: color-mix(in oklab, var(--ink) 80%, transparent);
+  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.45));
+  transform-origin: 56px 11.2px;          /* the pivot circle */
+  transform: rotate(-24deg);              /* lifted off the record */
+  transition: transform var(--dur-slow) var(--ease-out-expo);
+}
+.is-playing .arm { transform: rotate(0deg); }
+
+/* ---------- Spotify closed ---------- */
+.notice {
+  position: fixed; z-index: 3; left: 50%; top: 68vh;
+  transform: translateX(-50%);
+  width: calc(470px * var(--ts));
+  padding: 24px 30px 26px; border-radius: 24px;
+  display: grid; justify-items: center; gap: 8px; text-align: center;
+}
+.notice__icon { width: 30px; height: 30px; opacity: 0.8; }
+.notice__h { --fs: 44; line-height: 1; }
+.notice__p { --fs: 20; max-width: 30ch; line-height: 1.35; }
+.btn {
+  --fs: 21;
+  display: inline-flex; align-items: center; gap: 7px;
+  height: calc(40px * var(--ts)); padding: 0 20px; margin-top: 8px;
+  border-radius: 999px; font-weight: 700;
+  transition: transform var(--dur-med) var(--ease-spring), background-color var(--dur-fast) linear;
+}
+.btn--primary { background: var(--ink); color: var(--on-ink); text-shadow: none; }
+.btn--primary:hover { background: color-mix(in oklab, var(--ink) 88%, var(--accent)); }
+.btn:active { transform: scale(0.97); transition-duration: 80ms; }
+
+/* ---------- Edge glow: on top of everything, never takes clicks ---------- */
+.glow {
+  position: fixed; z-index: 10; pointer-events: none;
+  top: var(--safe-top); right: var(--safe-right); bottom: var(--safe-bottom); left: var(--safe-left);
+  opacity: var(--glow-opacity);
+  overflow: hidden;
+}
+.glow__rim {
+  position: absolute; inset: 0;
+  box-shadow:
+    inset 0 0 0 2px var(--accent),
+    inset 0 0 42px 2px color-mix(in oklab, var(--accent-2) 80%, transparent);
+}
+.glow__band {
+  position: absolute; left: 0; width: 200%; height: 48px;
+  will-change: transform;
+  animation: drift 32s linear infinite;
+}
+.glow__band--top { top: -14px; }
+.glow__band--bottom { bottom: -14px; animation-duration: 41s; animation-direction: reverse; }
+.glow__wave { display: block; width: 100%; height: 100%; overflow: visible; }
+.glow__soft { fill: none; stroke-width: 26; opacity: 0.85; }
+.glow__line { fill: none; stroke-width: 3; }
+.glow__band--top .glow__soft, .glow__band--top .glow__line { stroke: var(--accent); }
+.glow__band--bottom .glow__soft, .glow__band--bottom .glow__line { stroke: var(--accent-2); }
+@keyframes drift { to { transform: translateX(-50%); } }
+
+/* ---------- Motion switches ---------- */
+.anim-paused *, .anim-paused *::before, .anim-paused *::after { animation-play-state: paused !important; }
+.reduce-motion .record__disc, .reduce-motion .glow__band { animation: none; }

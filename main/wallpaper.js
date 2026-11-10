@@ -13,10 +13,10 @@
 // Every call is synchronous on purpose: restore() has to finish inside
 // signal handlers and before-quit, where async work may never run.
 
-const { execFileSync } = require('node:child_process');
+const { execFile, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const { CONFIG_DIR, writeJsonAtomic } = require('./config');
+const { CONFIG_DIR, CACHE_DIR, writeJsonAtomic } = require('./config');
 
 const CHANNEL = 'xfce4-desktop';
 const BACKUP_FILE = path.join(CONFIG_DIR, 'wallpaper-backup.json');
@@ -80,11 +80,79 @@ function set(imagePath) {
   }
 }
 
+// Per-song wallpaper (phase 2b)
+//
+// queueImage(jpegBuffer) never blocks the main process: the newest image wins,
+// older pending ones are dropped, and only one write runs at a time. Files
+// alternate between wall-a.jpg and wall-b.jpg because xfdesktop ignores a write
+// of the path it already shows. The slot being shown is never overwritten.
+
+const SLOTS = ['wall-a.jpg', 'wall-b.jpg'].map((f) => path.join(CACHE_DIR, f));
+let slot = 0;
+let pending = null;
+let working = false;
+let generation = 0;     // bumped by restore(); a running job stops at its next step
+let inflight = null;    // the xfconf-query child currently writing, if any
+let redoRestore = false;
+
+function xfconfAsync(args) {
+  return new Promise((resolve, reject) => {
+    inflight = execFile('xfconf-query', ['-c', CHANNEL, ...args], { timeout: 4000 }, (err) => {
+      inflight = null;
+      if (redoRestore) {
+        // restore() ran while this write was in the air; make sure the originals win.
+        redoRestore = false;
+        restore({ force: true });
+      }
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+function queueImage(buf) {
+  pending = buf;
+  if (!working) work();
+}
+
+async function work() {
+  working = true;
+  try {
+    while (pending) {
+      const buf = pending;
+      pending = null;
+      const gen = generation;
+      const file = SLOTS[slot];
+      try {
+        fs.writeFileSync(file, buf);
+        const backup = ensureBackup();
+        for (const { key } of backup.entries) {
+          if (gen !== generation) break;
+          await xfconfAsync(['-p', key, '-s', key.endsWith('/last-image') ? file : STYLE_ZOOMED]);
+        }
+        if (gen === generation) slot = 1 - slot;
+      } catch (err) {
+        console.error(`[wallpaper] per-song update failed: ${err.message}`);
+      }
+    }
+  } finally {
+    working = false;
+  }
+}
+
 // Returns true if anything was restored. Partial failure keeps dirty:true so the
 // next launch tries again.
-function restore() {
+// force: write the snapshot back even if it's already marked clean (used when a
+// killed per-song write may have landed after the first restore).
+function restore({ force = false } = {}) {
+  generation++;
+  pending = null;
+  if (inflight) {
+    inflight.kill();
+    redoRestore = true; // in case the killed write still lands after ours
+  }
   const backup = readBackup();
-  if (!backup?.dirty) return false;
+  if (!backup || (!backup.dirty && !force)) return false;
   // Style first, so xfdesktop redraws the original image with its original style.
   const ordered = [...backup.entries].sort(
     (a, b) => Number(b.key.endsWith('/image-style')) - Number(a.key.endsWith('/image-style')),
@@ -105,4 +173,4 @@ function restore() {
   return true;
 }
 
-module.exports = { BACKUP_FILE, set, restore, isDirty, listKeys };
+module.exports = { BACKUP_FILE, set, queueImage, restore, isDirty, listKeys };

@@ -1,26 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="is-idle">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
+        content="default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
   <title>Spotify Skin</title>
   <link rel="stylesheet" href="styles/tokens.css">
   <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/components.css">
 </head>
 <body>
-  <div class="backdrop" aria-hidden="true"></div>
+  <!-- Background: album art, lightly blurred with a dark vignette (rendered once per song). Two layers crossfade. -->
+  <div class="backdrop" aria-hidden="true">
+    <canvas class="backdrop__img" id="bg-0"></canvas>
+    <canvas class="backdrop__img" id="bg-1"></canvas>
+  </div>
 
-  <main class="stage">
-    <p class="stage__note">Nothing playing yet. Spotify connects in phase 2.</p>
-  </main>
+  <!-- Clock: top right while playing, big and centered when idle -->
+  <div class="clock" id="clock">
+    <span class="clock__date ree" id="clock-date"></span>
+    <span class="clock__time" id="clock-time" aria-hidden="true"></span>
+  </div>
 
-  <button class="hide-pill" id="hide" type="button"
-          aria-keyshortcuts="Control+Alt+M Escape" title="Hide (Ctrl+Alt+M)">
-    <svg class="icon" aria-hidden="true"><use href="/assets/icons/hide.svg#icon"></use></svg>
-    <span>Hide</span>
-    <kbd class="hide-pill__keys">Ctrl Alt M</kbd>
-  </button>
+  <!-- Song title and artist, bottom left. Stays in the minimal state. -->
+  <section class="now" id="now" aria-label="Now playing" hidden>
+    <span class="now__title line" id="now-title"></span>
+    <span class="now__artist line ree dim" id="now-artist"></span>
+  </section>
+
+  <!-- Everything below fades out after the inactivity timer (the "minimal" state) -->
+  <div class="chrome" id="chrome">
+    <div class="pills">
+      <button class="pill glass cav" id="hide" type="button" aria-keyshortcuts="Control+Alt+M Escape" title="Hide (Ctrl+Alt+M)">
+        <svg class="icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#i-hide"></use></svg>
+        <span>Hide</span>
+      </button>
+      <div class="a11y">
+        <button class="pill pill--aa glass cav" id="a11y-btn" type="button" aria-expanded="false" aria-controls="a11y-menu" title="Display options">
+          <span aria-hidden="true">Aa</span><span class="sr-only">Display options</span>
+        </button>
+        <div class="a11y-menu glass" id="a11y-menu" role="group" aria-label="Display options" hidden>
+          <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="reducedMotion"><span class="switch__label">Reduce motion</span><span class="switch__track" aria-hidden="true"></span></button>
+          <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="largeText"><span class="switch__label">Larger text</span><span class="switch__track" aria-hidden="true"></span></button>
+          <button class="switch cav" type="button" role="switch" aria-checked="false" data-a11y="highContrast"><span class="switch__label">Higher contrast</span><span class="switch__track" aria-hidden="true"></span></button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="queue glass" id="queue" aria-labelledby="queue-h">
+      <h2 class="queue__h ree" id="queue-h">Recently played</h2>
+      <span class="queue__sub cav dim">on this computer</span>
+      <ol class="queue__list" id="queue-list"></ol>
+      <p class="queue__empty cav dim" id="queue-empty" hidden>Songs you play will show up here.</p>
+    </aside>
+
+    <section class="dock" aria-label="Player controls">
+      <div class="controls glass" id="controls">
+        <div class="record" id="record" aria-hidden="true">
+          <div class="record__disc"><img class="record__label" id="record-label" alt=""></div>
+        </div>
+        <svg class="arm" id="arm" viewBox="0 0 90 120" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <circle cx="70" cy="14" r="9" stroke-width="2"/><circle cx="70" cy="14" r="3" fill="currentColor" stroke="none"/>
+          <path d="M70 23 L62 78 L46 98"/><rect x="36" y="94" width="16" height="10" rx="2.5" transform="rotate(-38 44 99)" fill="currentColor" stroke="none"/>
+        </svg>
+
+        <button class="ctl" id="btn-prev" type="button" aria-label="Previous"><svg class="icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#i-prev"></use></svg></button>
+        <button class="ctl ctl--play" id="btn-play" type="button" aria-label="Play"><svg class="icon" aria-hidden="true"><use id="play-icon" href="/assets/icons/sprite.svg#i-play"></use></svg></button>
+        <button class="ctl" id="btn-next" type="button" aria-label="Next"><svg class="icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#i-next"></use></svg></button>
+        <button class="ctl ctl--toggle" id="btn-shuffle" type="button" aria-label="Shuffle" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#i-shuffle"></use></svg></button>
+        <button class="ctl ctl--toggle" id="btn-repeat" type="button" aria-label="Repeat: off" aria-pressed="false"><svg class="icon" aria-hidden="true"><use id="repeat-icon" href="/assets/icons/sprite.svg#i-repeat"></use></svg></button>
+
+        <div class="track">
+          <span class="track__title line" id="dock-title"></span>
+          <span class="track__artist line ree dim" id="dock-artist"></span>
+          <svg class="icon track__heart" aria-hidden="true"><title>Likes come in phase 3</title><use href="/assets/icons/sprite.svg#i-heart"></use></svg>
+          <div class="progress">
+            <span class="progress__time cav dim" id="time-pos">0:00</span>
+            <div class="progress__rail" id="rail" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="0:00">
+              <span class="progress__fill" id="fill"></span>
+              <span class="progress__knob" id="knob"></span>
+            </div>
+            <span class="progress__time cav dim" id="time-left">0:00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Spotify closed -->
+  <section class="notice glass" id="notice" role="alert" hidden>
+    <svg class="icon notice__icon" aria-hidden="true"><use href="/assets/icons/sprite.svg#i-spotify-off"></use></svg>
+    <h2 class="notice__h ree">Spotify isn't open</h2>
+    <p class="notice__p cav dim">Your normal wallpaper is back. Start Spotify and this screen picks up again.</p>
+    <button class="btn btn--primary cav" id="open-spotify" type="button">Open Spotify</button>
+  </section>
+
+  <!-- Edge glow: thin neon rim plus a slow wavy band, colors from the art, drawn above the panels -->
+  <div class="glow" aria-hidden="true">
+    <div class="glow__rim"></div>
+    <div class="glow__band glow__band--top"><svg class="glow__wave" viewBox="0 0 3840 48" preserveAspectRatio="none"><path id="wave-top"/></svg></div>
+    <div class="glow__band glow__band--bottom"><svg class="glow__wave" viewBox="0 0 3840 48" preserveAspectRatio="none"><path id="wave-bottom"/></svg></div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>

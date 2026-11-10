@@ -16,6 +16,16 @@ const DEFAULTS = Object.freeze({
   setRealWallpaper: true,   // phase 2
   reducedEffects: false,    // phase 5
   clock24h: true,
+  // "desktop": behind every app, like a live wallpaper. "overlay": the phase 1
+  // fullscreen window on top of everything (fallback if the desktop layer misbehaves).
+  layer: 'desktop',
+  // Start Spotify in the background (window hidden) when the skin starts, and again
+  // if it quits while the skin is open. "Show Spotify" in the tray brings the window back.
+  autoOpenSpotify: true,
+  // Seconds without mouse movement before the panels fade to the minimal state.
+  minimalAfterSec: 30,
+  // reducedMotion: null follows the system setting; true/false is your choice from the Aa menu.
+  a11y: { reducedMotion: null, largeText: false, highContrast: false },
 });
 
 function ensureDirs() {
@@ -48,7 +58,8 @@ function load() {
     return { ...DEFAULTS };
   }
   try {
-    return { ...DEFAULTS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULTS, ...parsed, a11y: { ...DEFAULTS.a11y, ...parsed.a11y } };
   } catch (err) {
     // Never overwrite a file the user broke by hand; run on defaults instead.
     console.warn(`[config] ${CONFIG_FILE} is not valid JSON (${err.message}); using defaults.`);
